@@ -17,6 +17,12 @@
 (define-private (has-voted (sender principal))
   (is-some (map-get? votes { voter: sender })))
 
+;; Helper function to validate voting option
+(define-private (is-valid-option (option (string-ascii 50)))
+  (and 
+    (>= (len option) u1)
+    (<= (len option) u50)))
+
 ;; Public function for voting
 (define-public (vote)
   (let ((sender tx-sender))
@@ -49,6 +55,7 @@
       (asserts! (is-eq tx-sender contract-owner) (err u102)) ;; Only the contract owner can add options
       (asserts! (var-get voting-open) (err u103)) ;; Error u103 if voting is closed
       (asserts! (< (len current-options) u10) (err u104)) ;; Max 10 options
+      (asserts! (is-valid-option option) (err u107)) ;; Error u107 if option is invalid
       (ok (var-set voting-options (unwrap! (as-max-len? (concat current-options (list option)) u10) (err u106)))))))
 
 ;; Public function to close voting
