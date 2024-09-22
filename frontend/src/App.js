@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Connect } from '@stacks/connect-react';
 import { StacksTestnet } from '@stacks/network';
-import { callReadOnlyFunction, contractPrincipalCV, stringAsciiCV } from '@stacks/transactions';
+import { callReadOnlyFunction, contractPrincipalCV, stringAsciiCV, makeContractCall, broadcastTransaction } from '@stacks/transactions';
+import { UserSession } from '@stacks/auth';
 import VotingForm from './components/VotingForm';
 import Results from './components/Results';
 
 const App = () => {
   const [votingOptions, setVotingOptions] = useState([]);
   const [results, setResults] = useState({});
-  const [userSession, setUserSession] = useState(null);
+  const [userSession, setUserSession] = useState(new UserSession());
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -40,7 +41,19 @@ const App = () => {
     setVotingOptions(options.value.list);
   };
 
-  const handleVote = (option) => {
+  const handleVote = async (option) => {
+    const transaction = await makeContractCall({
+      contractAddress: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM',
+      contractName: 'voting',
+      functionName: 'vote',
+      functionArgs: [stringAsciiCV(option)],
+      senderKey: userSession.loadUserData().appPrivateKey,
+      network: new StacksTestnet(),
+    });
+
+    const result = await broadcastTransaction(transaction, new StacksTestnet());
+    console.log(result);
+
     setResults((prevResults) => ({
       ...prevResults,
       [option]: (prevResults[option] || 0) + 1,
