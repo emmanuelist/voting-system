@@ -5,32 +5,52 @@ import VotingForm from './components/VotingForm';
 import Results from './components/Results';
 import { fetchVotingOptions, fetchVoteCount } from './services/votingService';
 
+const initialState = {
+  votingOptions: [],
+  results: {},
+  userSession: new UserSession(),
+};
+
+const reducer = (state, action) => {
+  switch (action.type) {
+    case 'SET_VOTING_OPTIONS':
+      return { ...state, votingOptions: action.payload };
+    case 'SET_RESULTS':
+      return { ...state, results: action.payload };
+    case 'SET_USER_SESSION':
+      return { ...state, userSession: action.payload };
+    default:
+      return state;
+  }
+};
+
 const App = () => {
-  const [votingOptions, setVotingOptions] = useState([]);
-  const [results, setResults] = useState({});
-  const [userSession, setUserSession] = useState(new UserSession());
+  const [state, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
     const fetchResults = async () => {
       const newResults = {};
-      for (const option of votingOptions) {
+      for (const option of state.votingOptions) {
         const count = await fetchVoteCount(option);
         newResults[option] = count;
       }
-      setResults(newResults);
+      dispatch({ type: 'SET_RESULTS', payload: newResults });
     };
 
     fetchVotingOptions().then((options) => {
-      setVotingOptions(options);
+      dispatch({ type: 'SET_VOTING_OPTIONS', payload: options });
       fetchResults();
     });
-  }, [votingOptions]);
+  }, [state.votingOptions]);
 
   const handleVote = (option) => {
-    setResults((prevResults) => ({
-      ...prevResults,
-      [option]: (prevResults[option] || 0) + 1,
-    }));
+    dispatch({
+      type: 'SET_RESULTS',
+      payload: {
+        ...state.results,
+        [option]: (state.results[option] || 0) + 1,
+      },
+    });
   };
 
   return (
@@ -45,13 +65,13 @@ const App = () => {
           redirectTo: '/',
           onFinish: () => {
             const userSession = new UserSession();
-            setUserSession(userSession);
+            dispatch({ type: 'SET_USER_SESSION', payload: userSession });
           },
-          userSession,
+          userSession: state.userSession,
         }}
       />
       <VotingForm onVote={handleVote} />
-      <Results results={results} />
+      <Results results={state.results} />
     </div>
   );
 };
